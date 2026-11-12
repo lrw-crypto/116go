@@ -22,7 +22,7 @@ function view(id) {
     $("tbody").replaceChildren();
   }
   if (id !== "apply") $("#issued").replaceChildren();
-  notice("");
+  notice(backendAvailable ? "" : "教師後台尚未啟用。");
 }
 function bind(selector, action) {
   $(selector).addEventListener("submit", async event => {
@@ -40,7 +40,7 @@ function bind(selector, action) {
 }
 for (const button of document.querySelectorAll("[data-view]")) button.onclick = () => view(button.dataset.view);
 $("#logout").onclick = () => view("login");
-if (location.hash === "#join" || location.hash === "#apply") view(location.hash.slice(1));
+
 
 bind("#apply form", async (fields, _, form) => {
   const result = await request("apply", fields);
@@ -121,3 +121,18 @@ async function report(value) {
   notice("");
 }
 $("#refresh").onclick = () => { if (room) report(room).catch(error => notice(error.message)); };
+
+
+// The page remains reviewable while the administrator activates the backend.
+let backendAvailable = false;
+const formButtons = [...document.querySelectorAll("form button[type=submit]")];
+formButtons.forEach(button => button.disabled = true);
+if (location.hash === "#join" || location.hash === "#apply") view(location.hash.slice(1));
+fetch(endpoint).then(response => response.json()).then(state => {
+  if (!state.ok || state.service !== "quiz-classes-v1") throw new Error("inactive");
+  backendAvailable = true;
+  formButtons.forEach(button => button.disabled = false);
+  if ($("#notice").textContent === "教師後台尚未啟用。") notice("");
+}).catch(() => {
+  notice("教師後台尚未啟用，開放後即可送出申請或加入班級。");
+});
