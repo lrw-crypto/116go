@@ -4,6 +4,14 @@ h1{font-size:clamp(2rem,5vw,3rem)}h2{margin:0 0 12px}.box{background:#fff;border
 <header class="bar"><a class="brand" href="./"><span>116</span> 統測刷題入口</a></header>
 <main><h1>班級管理</h1><nav aria-label="班級服務"><button type="button" data-view="login">教師登入</button><button type="button" data-view="apply">教師申請</button><button type="button" data-view="join">學生加入班級</button></nav>
 <p id="notice" role="status" aria-live="polite"></p>
+<section class="box" id="my-sheet"><h2>我的 Google 試算表</h2>
+<p>班級服務開放後，核准的教師可用自己的 Google 帳號建立私人試算表，查看自己班級的五科刷題統計。學生不需要開啟或存取這份試算表。</p>
+<details><summary>首次設定方式（請在電腦上操作）</summary>
+<ol><li>以自己的 Google 帳號<a href="https://sheets.new" target="_blank" rel="noopener noreferrer">新建 Google 試算表</a>。請保留「一般存取：受限制」。</li>
+<li>開啟「擴充功能 → Apps Script」，貼上<a href="./teacher-sheet.gs.txt" target="_blank" rel="noopener">教師試算表連結程式</a>並儲存。不需要部署程式。</li>
+<li>回到試算表重新整理，點「116 班級紀錄 → 連結教師帳號」，依 Google 提示授權，再輸入申請時的電子郵件和教師登入金鑰。請不要把金鑰填在儲存格內。</li>
+<li>之後從「116 班級紀錄 → 更新班級紀錄」載入最新資料。同步用的「班級刷題紀錄」分頁會被更新，教師備註請另開分頁。</li></ol>
+</details></section>
 <section id="login" class="box"><h2>教師登入</h2><form><label>電子郵件<input name="email" type="email" required maxlength="120"></label><label>教師登入金鑰<input name="key" type="password" required minlength="64" maxlength="64" autocomplete="off" spellcheck="false"></label><button type="submit">登入</button></form></section>
 <section id="apply" class="box" hidden><h2>教師申請</h2><p class="hint">送出後，請透過校務管道把申請核對碼提供給網站管理者。核准後即可登入。</p><form><label>教師姓名<input name="name" required maxlength="50"></label><label>學校<input name="school" required maxlength="90"></label><label>校務電子郵件<input name="email" type="email" required maxlength="120"></label><button type="submit">送出申請</button></form><output id="issued"></output></section>
 <section id="join" class="box" hidden><h2>學生加入或退出班級</h2><p class="hint">請用該科已建立的刷題帳號。加入後，班級教師可查看你的代稱、最近作答、答對率與錯題統計。每一科各加入一次。</p><form><label>教師提供的班級代碼<input name="code" required maxlength="16" autocapitalize="characters" spellcheck="false"></label><label>科目<select name="site"><option value="testmath">數學</option><option value="Accounting">會計學</option><option value="economy">經濟學</option><option value="Business">商業概論</option><option value="Digital">數位科技概論</option></select></label><label>刷題代稱<input name="name" required maxlength="20"></label><label>四位數刷題密碼<input name="pin" type="password" inputmode="numeric" pattern="[0-9]{4}" required maxlength="4" autocomplete="off"></label><button type="submit" value="join">加入班級</button> <button type="submit" value="leave">退出班級</button></form></section>
