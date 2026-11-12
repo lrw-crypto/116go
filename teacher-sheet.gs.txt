@@ -1,0 +1,150 @@
+/** @OnlyCurrentDoc */
+
+const QUIZ_CLASS_API_ = 'https://script.google.com/macros/s/AKfycby1VQPaW7_Z_X4fg0lSHoqDmr3C4XKFuCPGr1gUnl1elkFL0OZX9jpgGHeNGx1EEmQjcw/exec?site=classes';
+const QUIZ_REPORT_TAB_ = '班級刷題紀錄';
+const QUIZ_REPORT_OWNER_ = '116go.report.v1';
+const QUIZ_REPORT_COLUMNS_ = ['班級', '科目', '學生代稱', '最近登入（台灣時間）', '最近作答（台灣時間）', '作答數', '答對率', '待複習', '已克服', '最近試卷'];
+const QUIZ_SUBJECTS_ = {economy:'經濟學', Digital:'數位科技概論', Accounting:'會計學', Business:'商業概論', testmath:'數學'};
+
+function onOpen() {
+  SpreadsheetApp.getUi().createMenu('116 班級紀錄')
+    .addItem('連結教師帳號', 'connectTeacherSheet')
+    .addItem('更新班級紀錄', 'syncTeacherSheet')
+    .addToUi();
+}
+
+function connectTeacherSheet() {
+  const form = HtmlService.createHtmlOutput(`<!doctype html><html lang="zh-Hant"><meta charset="utf-8">
+    <style>body{font:15px system-ui;padding:10px}label{display:block;margin:0 0 14px}input{display:block;width:95%;font:inherit;padding:6px}button{font:inherit;padding:6px}p{color:#6c1d22}</style>
+    <form><label>申請教師時使用的電子郵件<input name="email" type="email" required maxlength="120" autocomplete="username"></label>
+    <label>教師登入金鑰<input name="key" type="password" required pattern="[a-f0-9]{64}" autocomplete="off"></label>
+    <button type="submit">連結並載入紀錄</button><p role="status"></p></form>
+    <script>
+    document.querySelector('form').onsubmit = function (event) {
+      event.preventDefault();
+      const button = this.querySelector('button');
+      const status = this.querySelector('p');
+      button.disabled = true;
+      status.textContent = '正在載入紀錄…';
+      google.script.run.withSuccessHandler(() => google.script.host.close()).withFailureHandler(error => {
+        status.textContent = error.message;
+        button.disabled = false;
+      }).saveTeacherSheetConnection(this.elements.email.value, this.elements.key.value);
+    };
+    </script></html>`).setWidth(400).setHeight(240);
+  SpreadsheetApp.getUi().showModalDialog(form, '連結 116 教師帳號');
+}
+
+function saveTeacherSheetConnection(email, key) {
+  email = String(email).trim().toLowerCase();
+  key = String(key).trim();
+  if (email.length > 120 || !/^[a-z0-9][a-z0-9._+%-]*@[a-z0-9.-]+\.[a-z]{2,}$/.test(email) || !/^[a-f0-9]{64}$/.test(key)) {
+    throw new Error('請檢查教師電子郵件及登入金鑰。');
+  }
+  updateTeacherWorkbook_({email, key}, true);
+}
+
+function syncTeacherSheet() {
+  try {
+    updateTeacherWorkbook_(null, false);
+  } catch (error) {
+    SpreadsheetApp.getUi().alert(error.message);
+  }
+}
+
+function updateTeacherWorkbook_(credentials, connect) {
+  const lock = LockService.getDocumentLock();
+  if (!lock.tryLock(1000)) throw new Error('正在更新，請稍後再試。');
+  try {
+    const props = PropertiesService.getUserProperties();
+    credentials = credentials || {
+      email: props.getProperty('quizTeacherEmail'),
+      key: props.getProperty('quizTeacherKey')
+    };
+    if (!credentials.email || !credentials.key) throw new Error('請先從「116 班級紀錄」選單連結教師帳號。');
+    const book = SpreadsheetApp.getActiveSpreadsheet();
+    const rows = fetchTeacherSnapshot_(credentials);
+    writeTeacherSnapshot_(book, rows);
+    if (connect) props.setProperties({quizTeacherEmail: credentials.email, quizTeacherKey: credentials.key});
+    SpreadsheetApp.flush();
+    book.toast('已載入 ' + rows.length + ' 筆學生科目紀錄。', '116 班級紀錄', 5);
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+function quizClassRequest_(credentials, a, id) {
+  let result;
+  try {
+    const response = UrlFetchApp.fetch(QUIZ_CLASS_API_, {
+      method:'post', contentType:'text/plain;charset=utf-8',
+      payload:JSON.stringify({a, id, ...credentials}), muteHttpExceptions:true
+    });
+    if (response.getResponseCode() !== 200) throw new Error();
+    result = JSON.parse(response.getContentText());
+  } catch (_) {
+    throw new Error('目前無法連線到班級服務，已保留上次的紀錄。請稍後再試。');
+  }
+  if (result && result.ok === true) return result;
+  const errors = {auth:'教師電子郵件或登入金鑰不正確。', pending:'教師申請仍在等待核准。',
+    disabled:'這個教師帳號已停用。', busy:'目前使用人數較多，請稍後再試。',
+    forbidden:'班級權限已變更，請重新更新。'};
+  const message = result && Object.prototype.hasOwnProperty.call(errors, result.err) && errors[result.err];
+  throw new Error(message || '班級服務尚未開放或暫時無法使用，已保留上次的紀錄。');
+}
+
+function fetchTeacherSnapshot_(credentials) {
+  const {classes} = quizClassRequest_(credentials, 'list');
+  if (!Array.isArray(classes)) throw new Error('無法讀取班級清單，已保留上次的紀錄。');
+  const rows = [];
+  for (const room of classes) {
+    if (!room || typeof room.id !== 'string' || typeof room.title !== 'string') throw new Error('班級清單格式不正確。');
+    const {students} = quizClassRequest_(credentials, 'report', room.id);
+    if (!Array.isArray(students)) throw new Error('無法讀取班級紀錄，已保留上次的紀錄。');
+    for (const student of students) {
+      if (!student || typeof student.name !== 'string' || !Object.prototype.hasOwnProperty.call(QUIZ_SUBJECTS_, student.site)) {
+        throw new Error('班級紀錄格式不正確，已保留上次的紀錄。');
+      }
+      rows.push([quizText_(room.title), QUIZ_SUBJECTS_[student.site], quizText_(student.name),
+        quizDate_(student.login), quizDate_(student.attempt), quizNumber_(student.count),
+        quizNumber_(student.rate), quizNumber_(student.wrong), quizNumber_(student.mastered), quizText_(student.paper)]);
+    }
+  }
+  return rows;
+}
+
+// Enter untrusted text literally, including strings that Sheets could parse as formulas or numbers.
+function quizText_(value) { return typeof value === 'string' && value ? "'" + value : ''; }
+function quizNumber_(value) { return typeof value === 'number' && Number.isFinite(value) ? value : ''; }
+function quizDate_(value) {
+  const time = typeof value === 'string' ? new Date(value) : null;
+  return time && !isNaN(time.getTime()) ? Utilities.formatDate(time, 'Asia/Taipei', 'yyyy-MM-dd HH:mm') : '';
+}
+
+function writeTeacherSnapshot_(book, rows) {
+  let tab = book.getSheetByName(QUIZ_REPORT_TAB_);
+  const width = QUIZ_REPORT_COLUMNS_.length;
+  if (tab && !tab.getDeveloperMetadata().some(meta => meta.getKey() === QUIZ_REPORT_OWNER_)) {
+    throw new Error('已有同名的「班級刷題紀錄」工作表，請先將它改名。原有內容未變更。');
+  }
+  if (!tab) {
+    tab = book.insertSheet(QUIZ_REPORT_TAB_);
+    tab.addDeveloperMetadata(QUIZ_REPORT_OWNER_);
+    tab.setFrozenRows(2);
+    tab.setColumnWidths(1, 3, 145);
+    tab.setColumnWidths(4, 2, 180);
+    tab.setColumnWidths(6, 4, 100);
+    tab.setColumnWidth(10, 210);
+    tab.getRange(2, 1, 1, width).setBackground('#154434').setFontColor('#ffffff').setFontWeight('bold');
+  }
+  const snapshot = [
+    ['上次更新（台灣時間）：' + quizDate_(new Date().toISOString()), ...Array(width - 1).fill('')],
+    QUIZ_REPORT_COLUMNS_, ...rows
+  ];
+  const needed = snapshot.length;
+  const previous = tab.getLastRow();
+  if (tab.getMaxRows() < needed) tab.insertRowsAfter(tab.getMaxRows(), needed - tab.getMaxRows());
+  tab.getRange(1, 1, needed, width).setValues(snapshot);
+  if (previous > needed) tab.getRange(needed + 1, 1, previous - needed, width).clearContent();
+  if (rows.length) tab.getRange(3, 7, rows.length, 1).setNumberFormat('0.0%');
+}
