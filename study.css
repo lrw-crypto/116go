@@ -1,0 +1,7 @@
+.portal-back{display:inline-flex;align-items:center;min-height:44px;padding:5px 8px;color:var(--pri);font-size:14px;text-decoration:underline;text-underline-offset:3px}
+.brand{min-width:0;flex-wrap:wrap}.logo{flex:none}.top nav{min-width:0}main,.card,.pv,#opts{min-width:0}.stem,.opt,.exp,.wr,.pv{overflow-wrap:anywhere}.opt>*{min-width:0}.opt .k{flex:none}img{max-width:100%}.katex-display{overflow-x:auto;overflow-y:hidden}.pe h3{margin:9px 0 3px}.pe .exp{padding:0;background:transparent}
+.worksheet-export .case{background:#f1f4f7;color:#111}.worksheet-export .tbl th{background:#eee}.worksheet-export .tbl th,.worksheet-export .tbl td{color:#111;border-color:#bbb}.worksheet-export .paper-scan{max-height:870px;object-fit:contain}.worksheet-export img{max-width:100%}
+@media (max-width:900px){.top{position:static}.top nav button,.btn,.chip,.opt,.kb button,.pad button{min-height:44px}.pad{max-width:100%}.wr input{min-width:20px;min-height:20px}.pdfbar{gap:10px}}
+@media (max-width:520px){.top{gap:4px 10px;padding:8px 12px}.brand small{display:none}main{padding-inline:12px}.card{padding-inline:12px}.top nav{width:100%}.top nav button{padding-inline:9px}.pv{padding:12px}.pos{grid-template-columns:1fr}.pdfbar .btn{width:100%}}
+@page{size:A4;margin:14mm}
+@media print{.portal-back{display:none!important}.pv .tbl{overflow:visible}.pv .tbl table{max-width:100%}.pv .paper-scan{max-height:240mm;object-fit:contain}}
