@@ -1,7 +1,7 @@
 "use strict";
 const endpoint = "https://script.google.com/macros/s/AKfycby1VQPaW7_Z_X4fg0lSHoqDmr3C4XKFuCPGr1gUnl1elkFL0OZX9jpgGHeNGx1EEmQjcw/exec?site=classes";
 const $ = selector => document.querySelector(selector);
-const subjects = {economy:"經濟學", Digital:"數位科技概論", Accounting:"會計學", Business:"商業概論", testmath:"數學"};
+const subjects = {economy:"經濟學", Digital:"數位科技概論", Accounting:"會計學", Business:"商業概論", testmath:"數學", english:"英文", chinese:"國文"};
 const errors = {bad:"請檢查欄位格式。",exists:"這個電子郵件已有申請。",auth:"找不到帳號，或登入金鑰不正確。",pending:"你的申請正在等待管理者核准。",disabled:"教師帳號目前未開放。",forbidden:"這個班級不在你的管理範圍。",code:"班級代碼無效或已停用。",pin:"刷題密碼不正確。",locked:"密碼錯誤次數過多，請稍後再試。",busy:"目前使用人數較多，請稍後再試。"};
 let credentials = null, room = null, teacherEpoch = 0, reportEpoch = 0;
 

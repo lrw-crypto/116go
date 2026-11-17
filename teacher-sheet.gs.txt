@@ -4,7 +4,7 @@ const QUIZ_CLASS_API_ = 'https://script.google.com/macros/s/AKfycby1VQPaW7_Z_X4f
 const QUIZ_REPORT_TAB_ = '班級刷題紀錄';
 const QUIZ_REPORT_OWNER_ = '116go.report.v1';
 const QUIZ_REPORT_COLUMNS_ = ['班級', '科目', '學生代稱', '最近登入（台灣時間）', '最近作答（台灣時間）', '作答數', '答對率', '待複習', '已克服', '最近試卷'];
-const QUIZ_SUBJECTS_ = {economy:'經濟學', Digital:'數位科技概論', Accounting:'會計學', Business:'商業概論', testmath:'數學'};
+const QUIZ_SUBJECTS_ = {economy:'經濟學', Digital:'數位科技概論', Accounting:'會計學', Business:'商業概論', testmath:'數學', english:'英文', chinese:'國文'};
 
 function onOpen() {
   SpreadsheetApp.getUi().createMenu('116 班級紀錄')
